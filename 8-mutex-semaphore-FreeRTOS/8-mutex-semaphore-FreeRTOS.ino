@@ -3,6 +3,7 @@
 //----------------------------------------------------------
 
 #include <Arduino_FreeRTOS.h>
+#include <semphr.h>
 
 void Task_Print1(void *param);
 void Task_Print2(void *param);
@@ -10,12 +11,19 @@ void Task_Print2(void *param);
 TaskHandle_t Task_Handle1;
 TaskHandle_t Task_Handle2;
 
+SemaphoreHandle_t myMutex;
+
 volatile int a=0;
-volatile boolean myMutex = false;
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
+
+  // Create mutex Semaphore
+  myMutex = xSemaphoreCreateMutex();
+  if(myMutex == NULL){
+    Serial.println("Mutex cannot be created");  
+  }
 
   // Create tasks
   // xTaskCreate params:  Task, task name, task memory (don't worry about it for now), priority, task handler
@@ -33,11 +41,11 @@ void Task_Print1(void *param){
 
   // Infinite loop
   while(1){
-    while(myMutex == true);
+    xSemaphoreTake(myMutex, portMAX_DELAY);
     a = a+1;
     Serial.println(a);
-    vTaskDelay(10/portTICK_PERIOD_MS); // The Arduino will print to serial monitor each 1sec
-    myMutex = true; // Then this task go to infinite loop
+    vTaskDelay(20/portTICK_PERIOD_MS); // The Arduino will print to serial monitor each 1sec
+    xSemaphoreGive(myMutex);
   }
 }
 
@@ -46,10 +54,10 @@ void Task_Print2(void *param){
 
   // Infinite loop
   while(1){
-    while(myMutex == false);
+    xSemaphoreTake(myMutex, portMAX_DELAY);
     a = a+1;
     Serial.println(a);
-    vTaskDelay(10/portTICK_PERIOD_MS); // The Arduino will print to serial monitor each 1sec
-    myMutex = false;
+    vTaskDelay(20/portTICK_PERIOD_MS); // The Arduino will print to serial monitor each 1sec
+    xSemaphoreGive(myMutex);
   }
 }
